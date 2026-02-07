@@ -1,21 +1,35 @@
+from data.clubes import carregar_clubes_serie_a
 from core.liga import Liga
 from core.temporada import Temporada
+from ui.exibir_elenco import exibir_elenco
 
-from data.clubes import carregar_clubes_serie_a
+
+def escolher_clube(clubes):
+    print("\nEscolha seu clube:\n")
+
+    for i, clube in enumerate(clubes, start=1):
+        print(f"{i}. {clube.nome}")
+
+    while True:
+        escolha = input("\nNúmero do clube: ")
+        if escolha.isdigit():
+            escolha = int(escolha)
+            if 1 <= escolha <= len(clubes):
+                return clubes[escolha - 1]
 
 
 def main():
-    print("\n⚽ TOUCHLINE — Football Manager (Alpha)\n")
+    print("⚽ TOUCHLINE — Football Manager (Alpha)\n")
 
-    clubes_serie_a = carregar_clubes_serie_a()
+    clubes = carregar_clubes_serie_a()
+    clube_usuario = escolher_clube(clubes)
 
-    serie_a = Liga(
-        nome="Campeonato Brasileiro — Série A",
-        clubes=clubes_serie_a
-    )
+    exibir_elenco(clube_usuario)
 
-    temporada = Temporada(serie_a)
+    input("\nPressione ENTER para iniciar a temporada...")
 
+    liga = Liga("Campeonato Brasileiro — Série A", clubes)
+    temporada = Temporada(liga)
     temporada.jogar()
 
 
