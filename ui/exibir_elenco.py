@@ -1,4 +1,5 @@
 def exibir_elenco(clube):
+
     print(f"\n📋 Elenco do {clube.nome}")
     print("-" * 40)
 
@@ -7,7 +8,7 @@ def exibir_elenco(clube):
         print("-" * 20)
         for jogador in clube.elenco:
             if jogador.posicao == posicao:
-                print(f"{jogador.nome.ljust(18)} {jogador.over}")
+                print(f"{jogador.nome.ljust(18)} {jogador.overall}")
 
     print("\n📊 Médias")
     print("-" * 20)
@@ -22,5 +23,5 @@ def exibir_elenco(clube):
 
     print("\n⭐ Destaques")
     print("-" * 20)
-    print(f"Melhor jogador: {melhor.nome} ({melhor.over})")
-    print(f"Pior jogador:   {pior.nome} ({pior.over})")
+    print(f"Melhor jogador: {melhor.nome} ({melhor.overall})")
+    print(f"Pior jogador:   {pior.nome} ({pior.overall})")

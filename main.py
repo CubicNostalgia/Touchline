@@ -24,13 +24,31 @@ def main():
     clubes = carregar_clubes_serie_a()
     clube_usuario = escolher_clube(clubes)
 
-    exibir_elenco(clube_usuario)
-
-    input("\nPressione ENTER para iniciar a temporada...")
-
     liga = Liga("Campeonato Brasileiro — Série A", clubes)
     temporada = Temporada(liga)
-    temporada.jogar()
+
+    while True:
+        print("\n📋 Menu")
+        print("[1] Exibir elenco")
+        print("[2] Simular próxima rodada")
+        print("[3] Simular temporada inteira")
+        print("[0] Sair")
+
+        opcao = input("\nEscolha: ")
+
+        if opcao == "1":
+            exibir_elenco(clube_usuario)
+
+        elif opcao == "2":
+            temporada.simular_proxima_rodada()
+
+        elif opcao == "3":
+            temporada.jogar_temporada_completa()
+            break
+
+        elif opcao == "0":
+            print("\nSaindo do jogo...")
+            break
 
 
 if __name__ == "__main__":
