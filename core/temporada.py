@@ -1,58 +1,37 @@
-from engine.calendario import gerar_calendario
+from engine.calendario import gerar_calendario_dinamico
 from engine.simulador import simular_partida
-from ui.mensagens import mensagem_fim_temporada
+
 
 class Temporada:
     def __init__(self, liga):
         self.liga = liga
-
-        # Turno (ida)
-        self.calendario_turno = gerar_calendario(liga.clubes)
-
-        # Returno (volta) — inverte mando
-        self.calendario_returno = [
-            [(fora, casa) for casa, fora in rodada]
-            for rodada in self.calendario_turno
-        ]
-
-        # Calendário completo (ida + volta)
-        self.calendario_completo = self.calendario_turno + self.calendario_returno
-
-        self.rodada_atual = 0  # índice da rodada
-
+        self.calendario_completo = gerar_calendario_dinamico(liga.clubes)
+        self.rodada_atual = 0
         self.tabela = {
-            clube: {
-                "pontos": 0,
-                "vitorias": 0,
-                "empates": 0,
-                "derrotas": 0,
-                "gols_pro": 0,
-                "gols_contra": 0,
-            }
+            clube: {"pontos": 0, "vitorias": 0, "empates": 0, "derrotas": 0, "gols_pro": 0, "gols_contra": 0}
             for clube in liga.clubes
         }
-
-    # ======================
-    # Execução da temporada
-    # ======================
 
     def simular_proxima_rodada(self):
         if self.rodada_atual >= len(self.calendario_completo):
             print("\n🏁 A temporada já terminou.\n")
             return False
 
-        rodada = self.calendario_completo[self.rodada_atual]
-        numero_rodada = self.rodada_atual + 1
+        rodada_info = self.calendario_completo[self.rodada_atual]
+        data_txt = rodada_info["data"].strftime("%d/%m/%Y %H:%M")
+        print(f"\n🕒 Rodada {rodada_info['rodada']} — {rodada_info['competicao']} — {data_txt}")
 
-        print(f"\n🕒 Rodada {numero_rodada}")
-        self._jogar_rodada(rodada)
+        if self.rodada_atual > 0:
+            dias = (rodada_info["data"].date() - self.calendario_completo[self.rodada_atual - 1]["data"].date()).days
+            for clube in self.liga.clubes:
+                clube.recuperar_elenco(max(1, dias))
 
+        self._jogar_rodada(rodada_info["partidas"])
         self.rodada_atual += 1
 
         if self.rodada_atual == len(self.calendario_completo):
             print("🏁 Fim da temporada\n")
             self.exibir_tabela_final()
-
         return True
 
     def jogar_temporada_completa(self):
@@ -64,15 +43,14 @@ class Temporada:
         for casa, fora in rodada:
             gols_casa, gols_fora = simular_partida(casa, fora)
             self._registrar_partida(casa, fora, gols_casa, gols_fora)
-            
-            # Alinhamento dos resultados das partidas
+            casa.aplicar_partida()
+            fora.aplicar_partida()
             print(f"  {casa.nome:>12} {gols_casa} x {gols_fora} {fora.nome:<12}")
         print()
 
     def _registrar_partida(self, casa, fora, gols_casa, gols_fora):
         t_casa = self.tabela[casa]
         t_fora = self.tabela[fora]
-
         t_casa["gols_pro"] += gols_casa
         t_casa["gols_contra"] += gols_fora
         t_fora["gols_pro"] += gols_fora
@@ -82,61 +60,55 @@ class Temporada:
             t_casa["vitorias"] += 1
             t_casa["pontos"] += 3
             t_fora["derrotas"] += 1
+            casa.atualizar_desenvolvimento("V")
+            fora.atualizar_desenvolvimento("D")
         elif gols_casa < gols_fora:
             t_fora["vitorias"] += 1
             t_fora["pontos"] += 3
             t_casa["derrotas"] += 1
+            fora.atualizar_desenvolvimento("V")
+            casa.atualizar_desenvolvimento("D")
         else:
             t_casa["empates"] += 1
             t_fora["empates"] += 1
             t_casa["pontos"] += 1
             t_fora["pontos"] += 1
-
-    # ======================
-    # Classificação e Tabela
-    # ======================
+            casa.atualizar_desenvolvimento("E")
+            fora.atualizar_desenvolvimento("E")
 
     def classificacao(self):
         return sorted(
             self.tabela.items(),
-            key=lambda item: (
-                item[1]["pontos"],
-                item[1]["gols_pro"] - item[1]["gols_contra"],
-                item[1]["gols_pro"],
-            ),
-            reverse=True
+            key=lambda item: (item[1]["pontos"], item[1]["gols_pro"] - item[1]["gols_contra"], item[1]["gols_pro"]),
+            reverse=True,
         )
 
     def exibir_tabela_final(self):
-        # Limpa a tela ou garante que só rode uma vez
         classificacao_final = self.classificacao()
-
         print(f"\n🏆 CLASSIFICAÇÃO FINAL — {self.liga.nome.upper()}")
         print("=" * 65)
         print(f"{'POS':<4} {'CLUBE':<18} {'PTS':<4} {'V':<3} {'E':<3} {'D':<3} {'SG':<4} {'GP':<3}")
         print("-" * 65)
-
         for pos, (clube, dados) in enumerate(classificacao_final, start=1):
             saldo = dados["gols_pro"] - dados["gols_contra"]
-            # Usamos o nome do clube diretamente para evitar repetições de IDs
-            nome_clube = clube.nome
-            
-            print(f"{pos:>2}º  {nome_clube:<18} "
-                  f"{dados['pontos']:>3}  "
-                  f"{dados['vitorias']:>2}  "
-                  f"{dados['empates']:>2}  "
-                  f"{dados['derrotas']:>2}  "
-                  f"{saldo:>3}  "
-                  f"{dados['gols_pro']:>2}")
+            print(f"{pos:>2}º  {clube.nome:<18} {dados['pontos']:>3}  {dados['vitorias']:>2}  {dados['empates']:>2}  {dados['derrotas']:>2}  {saldo:>3}  {dados['gols_pro']:>2}")
 
         print("=" * 65)
+        print("⬆️ Série A: mantidos top-16, Z4 rebaixado para Série B.")
 
-        print("=" * 65)
-        
-        # Opcional: Mostrar veredito do G4 e Z4 usando o ui/mensagens.py
-        # Aqui, como não sabemos qual clube é o do usuário nesta classe, 
-        # apenas identificamos as zonas.
-        print("\nℹ️  Zonas de Classificação:")
-        print(f"• 1º a 4º: Fase de Grupos Libertadores")
-        print(f"• 5º: Pré-Libertadores")
-        print(f"• 17º a 20º: Rebaixamento")
+    @staticmethod
+    def definir_movimentos_serie_a(classificacao_serie_a):
+        return {
+            "rebaixados": [clube.nome for clube, _ in classificacao_serie_a[-4:]],
+            "mantidos": [clube.nome for clube, _ in classificacao_serie_a[:-4]],
+        }
+
+    @staticmethod
+    def definir_acessos_serie_b(classificacao_serie_b):
+        diretos = [clube.nome for clube, _ in classificacao_serie_b[:2]]
+        playoff = [clube.nome for clube, _ in classificacao_serie_b[2:6]]
+        return {
+            "acessos_diretos": diretos,
+            "playoff": [(playoff[0], playoff[3]), (playoff[1], playoff[2])],
+            "rebaixados_para_c": [clube.nome for clube, _ in classificacao_serie_b[-4:]],
+        }
