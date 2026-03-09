@@ -1,14 +1,17 @@
 def exibir_elenco(clube):
-
-    print(f"\n📋 Elenco do {clube.nome}")
-    print("-" * 40)
+    print(f"\n📋 Elenco do {clube.nome} ({clube.formacao})")
+    print("-" * 64)
 
     for posicao in ["GOL", "DEF", "MEI", "ATA"]:
         print(f"\n{posicao}")
-        print("-" * 20)
+        print("-" * 64)
         for jogador in clube.elenco:
             if jogador.posicao == posicao:
-                print(f"{jogador.nome.ljust(18)} {jogador.overall}")
+                print(
+                    f"{jogador.nome.ljust(22)} OVR:{str(jogador.overall).ljust(3)} "
+                    f"POT:{str(jogador.potencial).ljust(3)} ID:{str(jogador.idade).ljust(2)} "
+                    f"FAD:{int(jogador.fadiga):>2}"
+                )
 
     print("\n📊 Médias")
     print("-" * 20)
