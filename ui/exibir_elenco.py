@@ -1,27 +1,22 @@
 def exibir_elenco(clube):
+    print(f"\n📋 Elenco do {clube.nome} ({clube.formacao})")
+    print("-" * 72)
 
-    print(f"\n📋 Elenco do {clube.nome}")
-    print("-" * 40)
-
-    for posicao in ["GOL", "DEF", "MEI", "ATA"]:
+    ordem = ["GOL", "LD", "ZAG", "LE", "VOL", "MC", "MEI", "PD", "PE", "ATA"]
+    for posicao in ordem:
         print(f"\n{posicao}")
-        print("-" * 20)
+        print("-" * 72)
         for jogador in clube.elenco:
             if jogador.posicao == posicao:
-                print(f"{jogador.nome.ljust(18)} {jogador.overall}")
+                print(
+                    f"{jogador.nome.ljust(22)} OVR:{str(jogador.overall).ljust(3)} "
+                    f"POT:{str(jogador.potencial).ljust(3)} ID:{str(jogador.idade).ljust(2)} "
+                    f"FAD:{int(jogador.fadiga):>2} J:{jogador.jogos_temporada:>2}"
+                )
 
     print("\n📊 Médias")
     print("-" * 20)
     print(f"Média geral: {clube.forca}")
-
-    medias = clube.media_por_posicao()
-    for pos, media in medias.items():
-        print(f"{pos}: {media}")
-
-    melhor = clube.melhor_jogador()
-    pior = clube.pior_jogador()
-
-    print("\n⭐ Destaques")
-    print("-" * 20)
-    print(f"Melhor jogador: {melhor.nome} ({melhor.overall})")
-    print(f"Pior jogador:   {pior.nome} ({pior.overall})")
+    for pos, media in clube.media_por_posicao().items():
+        if media > 0:
+            print(f"{pos}: {media}")
