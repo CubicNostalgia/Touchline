@@ -1,41 +1,50 @@
 from core.clube import Clube
 from utils.gerador_jogadores import gerar_elenco
+from data.database import CLUBES_SERIE_A, CLUBES_SERIE_B_2026, PAULISTAO_EXTRAS_2026
 
 
-def carregar_clubes_serie_a():
-    dados = [
-        {"id": "flamen", "nome": "FLAMEN", "forca_base": 80, "reputacao": 5},
-        {"id": "palmei", "nome": "PALMEI", "forca_base": 79, "reputacao": 5},
-        {"id": "corinthns", "nome": "CORINTHNS", "forca_base": 77, "reputacao": 5},
-        {"id": "s_paulo", "nome": "S PAULO", "forca_base": 77, "reputacao": 5},
-        {"id": "gremio", "nome": "GREMIO", "forca_base": 76, "reputacao": 4},
-        {"id": "inter", "nome": "INTER", "forca_base": 76, "reputacao": 4},
-        {"id": "atl_mineiro", "nome": "ATL MINEIRO", "forca_base": 77, "reputacao": 4},
-        {"id": "ath_paranaense", "nome": "ATH PARANAENSE", "forca_base": 74, "reputacao": 3},
-        {"id": "bahia", "nome": "BAHIA", "forca_base": 75, "reputacao": 3},
-        {"id": "braga", "nome": "BRAGA", "forca_base": 74, "reputacao": 3},
-        {"id": "fluminse", "nome": "FLUMINSE", "forca_base": 74, "reputacao": 3},
-        {"id": "vasco", "nome": "VASCO", "forca_base": 73, "reputacao": 3},
-        {"id": "vitoria", "nome": "VITORIA", "forca_base": 73, "reputacao": 3},
-        {"id": "santos", "nome": "SANTOS", "forca_base": 74, "reputacao": 4},
-        {"id": "crtiba", "nome": "CRTIBA", "forca_base": 71, "reputacao": 3},
-        {"id": "chape", "nome": "CHAPE", "forca_base": 71, "reputacao": 2},
-        {"id": "remo", "nome": "REMO", "forca_base": 70, "reputacao": 2},
-        {"id": "mirassol", "nome": "MIRASSOL", "forca_base": 71, "reputacao": 2},
-        {"id": "botafo", "nome": "BOTAFO", "forca_base": 76, "reputacao": 4},
-        {"id": "cruzro", "nome": "CRUZRO", "forca_base": 75, "reputacao": 4},
-    ]
+def _normalizar_reputacao(valor):
+    # compatibilidade com base antiga em escala pequena
+    return valor if valor > 15 else max(1, min(100, valor * 15))
+
+
+def _instanciar_clubes(base, estado_mundo=None):
+    estado_mundo = estado_mundo or {}
+    idx_estado = {c["id"]: c for c in estado_mundo.get("clubes", [])}
 
     clubes = []
-    for c in dados:
-        elenco = gerar_elenco(c["forca_base"])
+    for c in base:
+        estado = idx_estado.get(c["id"], {})
         clubes.append(
             Clube(
                 id=c["id"],
                 nome=c["nome"],
-                elenco=elenco,
-                reputacao=c["reputacao"]
+                elenco=gerar_elenco(c["forca_base"]),
+                reputacao=_normalizar_reputacao(c.get("reputacao", 50)),
+                competicoes=c.get("competicoes", []),
+                dados_iniciais=estado,
             )
         )
-
     return clubes
+
+
+def carregar_clubes_serie_a(estado_mundo=None):
+    return _instanciar_clubes(CLUBES_SERIE_A, estado_mundo=estado_mundo)
+
+
+def carregar_clubes_serie_b_2026(estado_mundo=None):
+    return _instanciar_clubes(CLUBES_SERIE_B_2026, estado_mundo=estado_mundo)
+
+
+def carregar_clubes_paulistao(clubes_existentes=None, estado_mundo=None):
+    clubes_existentes = clubes_existentes or []
+    indice = {c.nome: c for c in clubes_existentes}
+
+    for clube in _instanciar_clubes(CLUBES_SERIE_A + CLUBES_SERIE_B_2026 + PAULISTAO_EXTRAS_2026, estado_mundo=estado_mundo):
+        indice.setdefault(clube.nome, clube)
+
+    participantes = [
+        "PALMEI", "CORINTHNS", "S PAULO", "BRAGA", "SANTOS", "MIRASSOL", "BOTAFO SP", "NOVORIZON",
+        "PNT PRETA", "S BERNAR", "PORTUGSA", "CAPIVARI", "GUARANI", "PRIMVERA", "NOROEST", "VEL CLUBE",
+    ]
+    return [indice[n] for n in participantes if n in indice]

@@ -1,27 +1,46 @@
-def exibir_elenco(clube):
+def _imprimir_bloco(jogadores, titulo):
+    print(f"\n📋 Elenco do {titulo}")
+    print("-" * 72)
 
-    print(f"\n📋 Elenco do {clube.nome}")
-    print("-" * 40)
-
-    for posicao in ["GOL", "DEF", "MEI", "ATA"]:
+    ordem = ["GOL", "LD", "ZAG", "LE", "VOL", "MC", "MEI", "PD", "PE", "ATA"]
+    for posicao in ordem:
         print(f"\n{posicao}")
-        print("-" * 20)
-        for jogador in clube.elenco:
+        print("-" * 72)
+        for jogador in jogadores:
             if jogador.posicao == posicao:
-                print(f"{jogador.nome.ljust(18)} {jogador.overall}")
+                print(
+                    f"{jogador.nome.ljust(22)} OVR:{str(jogador.overall).ljust(3)} "
+                    f"POT:{str(jogador.potencial).ljust(3)} ID:{str(jogador.idade).ljust(2)} "
+                    f"FAD:{int(jogador.fadiga):>2} J:{jogador.jogos_temporada:>2}"
+                )
 
-    print("\n📊 Médias")
-    print("-" * 20)
-    print(f"Média geral: {clube.forca}")
 
-    medias = clube.media_por_posicao()
-    for pos, media in medias.items():
-        print(f"{pos}: {media}")
+def exibir_elenco(clube):
+    print("\n[1] Elenco completo")
+    print("[2] Titulares")
+    print("[3] Reservas")
+    opcao = input("Exibir: ").strip()
 
-    melhor = clube.melhor_jogador()
-    pior = clube.pior_jogador()
+    if opcao == "2":
+        jogadores = clube.escalar_titulares()
+        titulo = f"{clube.nome} ({clube.formacao}) — Titulares"
+        medias = clube.media_por_posicao(apenas_titulares=True)
+    elif opcao == "3":
+        jogadores = clube.reservas()
+        titulo = f"{clube.nome} ({clube.formacao}) — Reservas"
+        medias = None
+    else:
+        jogadores = clube.elenco
+        titulo = f"{clube.nome} ({clube.formacao}) — Completo"
+        medias = clube.media_por_posicao(apenas_titulares=False)
 
-    print("\n⭐ Destaques")
-    print("-" * 20)
-    print(f"Melhor jogador: {melhor.nome} ({melhor.overall})")
-    print(f"Pior jogador:   {pior.nome} ({pior.overall})")
+    _imprimir_bloco(jogadores, titulo)
+
+    if medias is not None:
+        print("\n📊 Médias")
+        print("-" * 20)
+        media_geral = round(sum(j.overall for j in jogadores) / len(jogadores), 1) if jogadores else 0
+        print(f"Média geral: {media_geral}")
+        for pos, media in medias.items():
+            if media > 0:
+                print(f"{pos}: {media}")
