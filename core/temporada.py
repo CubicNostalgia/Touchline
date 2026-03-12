@@ -1,8 +1,10 @@
 from collections import defaultdict
 from datetime import date
+
 from engine.calendario import gerar_calendario_brasileirao, gerar_calendario_paulistao
 from engine.simulador import simular_partida
 from ui.mensagens import mensagem_resultado_objetivos
+from core.save_manager import salvar_save, carregar_save
 
 
 class Temporada:
@@ -129,10 +131,10 @@ class Temporada:
                 cumprido = pos_paul is not None and pos_paul <= 8
             elif obj["id"] == "liga_top":
                 if "bra_a" in self.clube_usuario.competicoes:
-                    limite = 8 if self.clube_usuario.reputacao >= 4 else 12
+                    limite = 8 if self.clube_usuario.reputacao >= 60 else 12
                     cumprido = pos_liga is not None and pos_liga <= limite
                 else:
-                    limite = 6 if self.clube_usuario.reputacao >= 2 else 10
+                    limite = 6 if self.clube_usuario.reputacao >= 30 else 10
                     cumprido = pos_liga is not None and pos_liga <= limite
             elif obj["id"] == "base":
                 cumprido = base_ok
@@ -145,6 +147,24 @@ class Temporada:
                 return i
         return None
 
+    def _simular_playoffs_serie_b(self):
+        classif = self.classificacao("bra_b")
+        terceiro, quarto, quinto, sexto = classif[2][0], classif[3][0], classif[4][0], classif[5][0]
+
+        def jogo_unico(mandante, visitante):
+            g_m, g_v = simular_partida(mandante, visitante)
+            if g_m == g_v:
+                g_m += 1  # vantagem do mandante no desempate (modelo simples)
+            return mandante if g_m > g_v else visitante, g_m, g_v
+
+        v1, g1, g2 = jogo_unico(terceiro, sexto)
+        v2, g3, g4 = jogo_unico(quarto, quinto)
+
+        print("\n🎯 PLAYOFFS DE ACESSO — SÉRIE B")
+        print(f"{terceiro.nome} {g1} x {g2} {sexto.nome}  -> classificado: {v1.nome}")
+        print(f"{quarto.nome} {g3} x {g4} {quinto.nome}  -> classificado: {v2.nome}")
+        return [v1.nome, v2.nome]
+
     def exibir_fechamento_temporada(self):
         print("\n🏁 Fim da temporada")
         if "paulistao_a1" in self.tabelas:
@@ -156,7 +176,9 @@ class Temporada:
             self.exibir_tabela("bra_b")
             self._mostrar_regra_b()
 
-        mensagem_resultado_objetivos(self._avaliar_objetivos())
+        resultados = self._avaliar_objetivos()
+        mensagem_resultado_objetivos(resultados)
+        self._atualizar_estado_mundo(resultados)
 
     def _mostrar_regra_a(self):
         classif = self.classificacao("bra_a")
@@ -169,4 +191,29 @@ class Temporada:
         playoff = [c.nome for c, _ in classif[2:6]]
         print(f"\n⬆️ Acesso direto Série B: {', '.join(diretos)}")
         print(f"🎯 Playoffs: {playoff[0]} x {playoff[3]} e {playoff[1]} x {playoff[2]} (jogo único)")
+        vencedores = self._simular_playoffs_serie_b()
+        print(f"✅ Vagas via playoff: {', '.join(vencedores)}")
         print(f"⬇️ Rebaixados Série B: {', '.join([c.nome for c, _ in classif[-4:]])}")
+
+    def _atualizar_estado_mundo(self, resultados_objetivos):
+        estado = carregar_save() or {"meta": {"temporada_atual": 2026}, "clubes": []}
+        mapa_estado = {c["id"]: c for c in estado.get("clubes", [])}
+
+        clube_usuario_sucesso = all(r["cumprido"] for r in resultados_objetivos) if resultados_objetivos else False
+        rebaixado = False
+        if "bra_a" in self.tabelas and self._posicao_clube("bra_a") and self._posicao_clube("bra_a") > 16:
+            rebaixado = True
+        if "bra_b" in self.tabelas and self._posicao_clube("bra_b") and self._posicao_clube("bra_b") > 16:
+            rebaixado = True
+
+        todos_clubes = {c for e in self.calendario_completo for p in e["partidas"] for c in p}
+        for clube in todos_clubes:
+            clube.atualizar_reputacao_financas_fim_ano(
+                sucesso=clube_usuario_sucesso and self.clube_usuario and clube.id == self.clube_usuario.id,
+                rebaixado=rebaixado and self.clube_usuario and clube.id == self.clube_usuario.id,
+            )
+            mapa_estado[clube.id] = clube.to_dict()
+
+        estado["clubes"] = list(mapa_estado.values())
+        estado["meta"]["temporada_atual"] = estado["meta"].get("temporada_atual", 2026) + 1
+        salvar_save(estado)
